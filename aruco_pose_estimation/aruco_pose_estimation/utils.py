@@ -52,6 +52,10 @@ def aruco_display(corners, ids, image):
             bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
             topLeft = (int(topLeft[0]), int(topLeft[1]))
 
+            # ###### ADDED: Ground Truth
+            # bb_height, bb_width = ((topRight - bottomRight), (topRight - topLeft))
+            # ######
+
             cv2.line(image, topLeft, topRight, (0, 255, 0), 2)
             cv2.line(image, topRight, bottomRight, (0, 255, 0), 2)
             cv2.line(image, bottomRight, bottomLeft, (0, 255, 0), 2)
@@ -68,5 +72,7 @@ def aruco_display(corners, ids, image):
         logger = rcutils_logger.RcutilsLogger(name="aruco_node")
         logger.debug("[Inference] ArUco markers IDs: {}".format(ids))
 
-    return image
+    return image # ###### ADDED: Ground Truth 
+                  # bb_height, bb_width
+                  # ######
 
