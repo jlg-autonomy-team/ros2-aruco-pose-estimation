@@ -67,6 +67,12 @@ def pose_estimation(rgb_frame: np.array, depth_frame: np.array, aruco_detector: 
                                                                     camera_matrix=matrix_coefficients,
                                                                     distortion=distortion_coefficients)
 
+            # ###### ADDED: Ground Truth
+            # show the detected markers bounding boxes
+            # frame_processed, bbh, bbw = aruco_display(corners=corners, ids=marker_ids,
+            #                                 image=frame_processed)
+            # ######
+            
             # show the detected markers bounding boxes
             frame_processed = aruco_display(corners=corners, ids=marker_ids,
                                             image=frame_processed)
@@ -110,6 +116,7 @@ def pose_estimation(rgb_frame: np.array, depth_frame: np.array, aruco_detector: 
             markers.poses.append(pose)
             markers.marker_ids.append(marker_id[0])
 
+    # return frame_processed, bbh, bbw, pose_array, markers
     return frame_processed, pose_array, markers
 
 
@@ -171,6 +178,7 @@ def depth_to_pointcloud_centroid(depth_image: np.array, intrinsic_matrix: np.arr
 
     for x, y in corners_indices:
         if x < 0 or x >= width or y < 0 or y >= height:
+            print('X and Y are: ', x, y)
             raise ValueError("One or more corners are outside the image bounds.")
 
     # bounding box of the polygon
