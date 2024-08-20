@@ -67,16 +67,27 @@ import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
 
-# station_nav_params_file = os.path.join(
-#     get_package_share_directory("marker_detection"),
-#     "config",
-#     "stn_nav_params.yaml",
-# )
+import tf_transformations as tft
 
-# with open(station_nav_params_file, "r") as file:
-#     config = yaml.safe_load(file)
 
-# config = config["/station_navigator"]
+def mean_orientation(self, quaternions):
+    # Convert quaternions to 4x4 transformation matrices
+    rot_mats = [tft.quaternion_matrix(q)[:3, :3] for q in quaternions]
+
+    # Compute the average of the rotation matrices
+    avg_rot_mat = np.mean(rot_mats, axis=0)
+
+    # Ensure the average matrix is orthogonal using SVD
+    # U, _, Vt = np.linalg.svd(avg_rot_mat)
+    # avg_rot_mat = np.dot(U, Vt)
+
+    # Convert the average rotation matrix back to a quaternion
+    avg_transformation_matrix = np.eye(4)
+    avg_transformation_matrix[:3, :3] = avg_rot_mat
+    mean_quaternion = tft.quaternion_from_matrix(avg_transformation_matrix)
+
+    # Return the quaternion as a list of 4 values
+    return list(mean_quaternion)  # Ensure the result is a list
 
 
 class ArucoNode(rclpy.node.Node):
@@ -162,11 +173,6 @@ class ArucoNode(rclpy.node.Node):
         # code for updated version of cv2 (4.7.0)
         self.aruco_dictionary = cv2.aruco.getPredefinedDictionary(dictionary_id)
         self.aruco_parameters = cv2.aruco.DetectorParameters()
-        # Custom params
-        self.aruco_parameters.adaptiveThreshWinSizeMin = 5
-        self.aruco_parameters.adaptiveThreshWinSizeMax = 23
-        self.aruco_parameters.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-
         self.aruco_detector = cv2.aruco.ArucoDetector(
             self.aruco_dictionary, self.aruco_parameters
         )
@@ -265,20 +271,20 @@ class ArucoNode(rclpy.node.Node):
             t.header.frame_id = "camera_color_frame"
             t.child_frame_id = "marker"
 
-            # print(
-            #     "Marker Location is x: {0}, y: {1}, z: {2}".format(
-            #         first_pose.position.x, first_pose.position.y, first_pose.position.z
-            #     )
-            # )
+            print(
+                "Marker Location is x: {0}, y: {1}, z: {2}".format(
+                    first_pose.position.x, first_pose.position.y, first_pose.position.z
+                )
+            )
 
-            # print(
-            #     "Marker Orientation is w: {0}, x: {1}, y: {2}, z:{3}".format(
-            #         first_pose.orientation.w,
-            #         first_pose.orientation.x,
-            #         first_pose.orientation.y,
-            #         first_pose.orientation.z,
-            #     )
-            # )
+            print(
+                "Marker Orientation is w: {0}, x: {1}, y: {2}, z:{3}".format(
+                    first_pose.orientation.w,
+                    first_pose.orientation.x,
+                    first_pose.orientation.y,
+                    first_pose.orientation.z,
+                )
+            )
 
             t.transform.translation.x = first_pose.position.x
             t.transform.translation.y = first_pose.position.y
