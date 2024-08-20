@@ -29,6 +29,10 @@ install(PROGRAMS
     scripts/aruco_node.py
     DESTINATION lib/${PROJECT_NAME}
 )
+install(PROGRAMS
+    scripts/aruco_node_gfr.py
+    DESTINATION lib/${PROJECT_NAME}
+)
 
 # Install directories
 install(DIRECTORY

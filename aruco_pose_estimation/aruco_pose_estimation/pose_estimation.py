@@ -20,10 +20,17 @@ from aruco_interfaces.msg import ArucoMarkers
 from aruco_pose_estimation.utils import aruco_display
 
 
-def pose_estimation(rgb_frame: np.array, depth_frame: np.array, aruco_detector: cv2.aruco.ArucoDetector, marker_size: float,
-                    matrix_coefficients: np.array, distortion_coefficients: np.array,
-                    pose_array: PoseArray, markers: ArucoMarkers) -> list[np.array, PoseArray, ArucoMarkers]:
-    '''
+def pose_estimation(
+    rgb_frame: np.array,
+    depth_frame: np.array,
+    aruco_detector: cv2.aruco.ArucoDetector,
+    marker_size: float,
+    matrix_coefficients: np.array,
+    distortion_coefficients: np.array,
+    pose_array: PoseArray,
+    markers: ArucoMarkers,
+) -> list[np.array, PoseArray, ArucoMarkers]:
+    """
     rgb_frame - Frame from the RGB camera stream
     depth_frame - Depth frame from the depth camera stream
     matrix_coefficients - Intrinsic matrix of the calibrated camera
@@ -35,7 +42,7 @@ def pose_estimation(rgb_frame: np.array, depth_frame: np.array, aruco_detector: 
     frame - The frame with the axis drawn on it
     pose_array - PoseArray with computed poses of the markers
     markers - ArucoMarkers message containing markers id number and pose
-    '''
+    """
 
     # old code version
     # parameters = cv2.aruco.DetectorParameters_create()
@@ -63,37 +70,49 @@ def pose_estimation(rgb_frame: np.array, depth_frame: np.array, aruco_detector: 
             # tvec = tvec[0]
 
             # alternative code version using solvePnP
-            tvec, rvec, quat = my_estimatePoseSingleMarkers(corners=corners[i], marker_size=marker_size,
-                                                                    camera_matrix=matrix_coefficients,
-                                                                    distortion=distortion_coefficients)
+            tvec, rvec, quat = my_estimatePoseSingleMarkers(
+                corners=corners[i],
+                marker_size=marker_size,
+                camera_matrix=matrix_coefficients,
+                distortion=distortion_coefficients,
+            )
 
             # ###### ADDED: Ground Truth
             # show the detected markers bounding boxes
             # frame_processed, bbh, bbw = aruco_display(corners=corners, ids=marker_ids,
             #                                 image=frame_processed)
             # ######
-            
+
             # show the detected markers bounding boxes
-            frame_processed = aruco_display(corners=corners, ids=marker_ids,
-                                            image=frame_processed)
+            frame_processed = aruco_display(
+                corners=corners, ids=marker_ids, image=frame_processed
+            )
 
             # draw frame axes
-            frame_processed = cv2.drawFrameAxes(image=frame_processed, cameraMatrix=matrix_coefficients,
-                                                distCoeffs=distortion_coefficients, rvec=rvec, tvec=tvec,
-                                                length=0.05, thickness=3)
+            frame_processed = cv2.drawFrameAxes(
+                image=frame_processed,
+                cameraMatrix=matrix_coefficients,
+                distCoeffs=distortion_coefficients,
+                rvec=rvec,
+                tvec=tvec,
+                length=0.05,
+                thickness=3,
+            )
 
-            if (depth_frame is not None):
+            if depth_frame is not None:
                 # get the centroid of the pointcloud
-                centroid = depth_to_pointcloud_centroid(depth_image=depth_frame,
-                                                        intrinsic_matrix=matrix_coefficients,
-                                                        corners=corners[i])
+                centroid = depth_to_pointcloud_centroid(
+                    depth_image=depth_frame,
+                    intrinsic_matrix=matrix_coefficients,
+                    corners=corners[i],
+                )
 
                 # log comparison between depthcloud centroid and tvec estimated positions
                 logger.info(f"depthcloud centroid = {centroid}")
                 logger.info(f"tvec = {tvec[0]} {tvec[1]} {tvec[2]}")
 
             # compute pose from the rvec and tvec arrays
-            if (depth_frame is not None):
+            if depth_frame is not None:
                 # use computed centroid from depthcloud as estimated pose
                 pose = Pose()
                 pose.position.x = float(centroid[0])
@@ -120,8 +139,10 @@ def pose_estimation(rgb_frame: np.array, depth_frame: np.array, aruco_detector: 
     return frame_processed, pose_array, markers
 
 
-def my_estimatePoseSingleMarkers(corners, marker_size, camera_matrix, distortion) -> tuple[np.array, np.array, np.array]:
-    '''
+def my_estimatePoseSingleMarkers(
+    corners, marker_size, camera_matrix, distortion
+) -> tuple[np.array, np.array, np.array]:
+    """
     This will estimate the rvec and tvec for each of the marker corners detected by:
        corners, ids, rejectedImgPoints = detector.detectMarkers(image)
 
@@ -130,18 +151,28 @@ def my_estimatePoseSingleMarkers(corners, marker_size, camera_matrix, distortion
     mtx - is the camera intrinsic matrix
     distortion - is the camera distortion matrix
     RETURN list of rvecs, tvecs, and trash (so that it corresponds to the old estimatePoseSingleMarkers())
-    '''
-    marker_points = np.array([[-marker_size / 2.0, marker_size / 2.0, 0],
-                              [marker_size / 2.0, marker_size / 2.0, 0],
-                              [marker_size / 2.0, -marker_size / 2.0, 0],
-                              [-marker_size / 2.0, -marker_size / 2.0, 0]], dtype=np.float32)
+    """
+    marker_points = np.array(
+        [
+            [-marker_size / 2.0, marker_size / 2.0, 0],
+            [marker_size / 2.0, marker_size / 2.0, 0],
+            [marker_size / 2.0, -marker_size / 2.0, 0],
+            [-marker_size / 2.0, -marker_size / 2.0, 0],
+        ],
+        dtype=np.float32,
+    )
 
     # solvePnP returns the rotation and translation vectors
-    retval, rvec, tvec = cv2.solvePnP(objectPoints=marker_points, imagePoints=corners,
-                                        cameraMatrix=camera_matrix, distCoeffs=distortion, flags=cv2.SOLVEPNP_IPPE_SQUARE)
+    retval, rvec, tvec = cv2.solvePnP(
+        objectPoints=marker_points,
+        imagePoints=corners,
+        cameraMatrix=camera_matrix,
+        distCoeffs=distortion,
+        flags=cv2.SOLVEPNP_IPPE_SQUARE,
+    )
     rvec = rvec.reshape(3, 1)
     tvec = tvec.reshape(3, 1)
-       
+
     rot, jacobian = cv2.Rodrigues(rvec)
     rot_matrix = np.eye(4, dtype=np.float32)
     rot_matrix[0:3, 0:3] = rot
@@ -154,8 +185,9 @@ def my_estimatePoseSingleMarkers(corners, marker_size, camera_matrix, distortion
     return tvec, rvec, quaternion
 
 
-def depth_to_pointcloud_centroid(depth_image: np.array, intrinsic_matrix: np.array,
-                                 corners: np.array) -> np.array:
+def depth_to_pointcloud_centroid(
+    depth_image: np.array, intrinsic_matrix: np.array, corners: np.array
+) -> np.array:
     """
     This function takes a depth image and the corners of a quadrilateral as input,
     and returns the centroid of the corresponding pointcloud.
@@ -170,7 +202,6 @@ def depth_to_pointcloud_centroid(depth_image: np.array, intrinsic_matrix: np.arr
 
     # Get image parameters
     height, width = depth_image.shape
-    
 
     # Check if all corners are within image bounds
     # corners has shape (1, 4, 2)
@@ -178,7 +209,7 @@ def depth_to_pointcloud_centroid(depth_image: np.array, intrinsic_matrix: np.arr
 
     for x, y in corners_indices:
         if x < 0 or x >= width or y < 0 or y >= height:
-            print('X and Y are: ', x, y)
+            print("X and Y are: ", x, y)
             raise ValueError("One or more corners are outside the image bounds.")
 
     # bounding box of the polygon
@@ -198,19 +229,19 @@ def depth_to_pointcloud_centroid(depth_image: np.array, intrinsic_matrix: np.arr
 
     # Convert points to numpy array
     points = np.array(points, dtype=np.uint16)
-   
+
     # convert to open3d image
-    #depth_segmented = geometry.Image(points)
+    # depth_segmented = geometry.Image(points)
     # create pinhole camera model
-    #pinhole_matrix = camera.PinholeCameraIntrinsic(width=width, height=height, 
+    # pinhole_matrix = camera.PinholeCameraIntrinsic(width=width, height=height,
     #                                               intrinsic_matrix=intrinsic_matrix)
     # Convert points to Open3D pointcloud
-    #pointcloud = geometry.PointCloud.create_from_depth_image(depth=depth_segmented, intrinsic=pinhole_matrix,
+    # pointcloud = geometry.PointCloud.create_from_depth_image(depth=depth_segmented, intrinsic=pinhole_matrix,
     #                                                         depth_scale=1000.0)
 
-    # apply formulas to pointcloud, where 
+    # apply formulas to pointcloud, where
     # fx = intrinsic_matrix[0, 0], fy = intrinsic_matrix[1, 1]
-    # cx = intrinsic_matrix[0, 2], cy = intrinsic_matrix[1, 2], 
+    # cx = intrinsic_matrix[0, 2], cy = intrinsic_matrix[1, 2],
     # u = x, v = y, d = depth_image[y, x], depth_scale = 1000.0,
     # z = d / depth_scale
     # x = (u - cx) * z / fx
