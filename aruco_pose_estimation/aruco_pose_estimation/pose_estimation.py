@@ -13,13 +13,37 @@ from rclpy.impl import rcutils_logger
 
 # ROS2 message imports
 from geometry_msgs.msg import Pose
-from geometry_msgs.msg import PoseArray
+from geometry_msgs.msg import PoseArray,Point32
 from aruco_interfaces.msg import ArucoMarkers
+from tf_transformations import quaternion_from_euler, euler_from_quaternion
 
 # utils import python code
 from aruco_pose_estimation.utils import aruco_display
-
-
+import math
+def compute_pose_rpy(poseArray: PoseArray) -> PoseArray:
+    anglesArray = PoseArray()
+    to_deg = 180/math.pi
+    if len(poseArray.poses) == 0:
+        return anglesArray
+    for pose in poseArray.poses:
+        position = pose.position
+        orientation = pose.orientation
+        (r, p, y) = euler_from_quaternion(
+        [
+            orientation.x,
+            orientation.y,
+            orientation.z,
+            orientation.w,
+        ])
+        pose = Pose()
+        pose.position.x = r * to_deg
+        pose.position.y = p * to_deg
+        pose.position.z = y * to_deg
+        anglesArray.poses.append(pose)
+    anglesArray.header = poseArray.header
+    return anglesArray
+        
+    
 def pose_estimation(rgb_frame: np.array, depth_frame: np.array, aruco_detector: cv2.aruco.ArucoDetector, marker_size: float,
                     matrix_coefficients: np.array, distortion_coefficients: np.array,
                     pose_array: PoseArray, markers: ArucoMarkers) -> list[np.array, PoseArray, ArucoMarkers]:
@@ -67,12 +91,6 @@ def pose_estimation(rgb_frame: np.array, depth_frame: np.array, aruco_detector: 
                                                                     camera_matrix=matrix_coefficients,
                                                                     distortion=distortion_coefficients)
 
-            # ###### ADDED: Ground Truth
-            # show the detected markers bounding boxes
-            # frame_processed, bbh, bbw = aruco_display(corners=corners, ids=marker_ids,
-            #                                 image=frame_processed)
-            # ######
-            
             # show the detected markers bounding boxes
             frame_processed = aruco_display(corners=corners, ids=marker_ids,
                                             image=frame_processed)
@@ -115,9 +133,9 @@ def pose_estimation(rgb_frame: np.array, depth_frame: np.array, aruco_detector: 
             pose_array.poses.append(pose)
             markers.poses.append(pose)
             markers.marker_ids.append(marker_id[0])
-
-    # return frame_processed, bbh, bbw, pose_array, markers
-    return frame_processed, pose_array, markers
+    
+    angles_array = compute_pose_rpy(pose_array)
+    return frame_processed, pose_array, markers,angles_array
 
 
 def my_estimatePoseSingleMarkers(corners, marker_size, camera_matrix, distortion) -> tuple[np.array, np.array, np.array]:
@@ -178,7 +196,6 @@ def depth_to_pointcloud_centroid(depth_image: np.array, intrinsic_matrix: np.arr
 
     for x, y in corners_indices:
         if x < 0 or x >= width or y < 0 or y >= height:
-            print('X and Y are: ', x, y)
             raise ValueError("One or more corners are outside the image bounds.")
 
     # bounding box of the polygon
