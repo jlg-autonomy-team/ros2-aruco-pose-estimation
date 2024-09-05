@@ -112,6 +112,7 @@ class ArucoNode(rclpy.node.Node):
         self.poses_pub = self.create_publisher(PoseArray, self.markers_visualization_topic, 10)
         self.markers_pub = self.create_publisher(ArucoMarkers, self.detected_markers_topic, 10)
         self.image_pub = self.create_publisher(Image, self.output_image_topic, 10)
+        # output array of roll,pitch.,yaw angles. Stored in position x,y,z respectively. Unit is degrees.[0,360)
         self.RPY_pub = self.create_publisher(PoseArray, "RPY", 10)
         
         # Set up fields for camera parameters
@@ -174,6 +175,7 @@ class ArucoNode(rclpy.node.Node):
         # self.distortion = np.array([-0.269990, 0.048121, -0.000096, 0.003263, 0.000000])
 
         # call the pose estimation function
+        print(self.intrinsic_mat,self.distortion)
         frame, pose_array, markers,angles_array = pose_estimation(rgb_frame=cv_image, depth_frame=None,
                                                      aruco_detector=self.aruco_detector,
                                                      marker_size=self.marker_size, matrix_coefficients=self.intrinsic_mat,
