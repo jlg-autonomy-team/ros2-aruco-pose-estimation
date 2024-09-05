@@ -36,9 +36,9 @@ def compute_pose_rpy(poseArray: PoseArray) -> PoseArray:
             orientation.w,
         ])
         pose = Pose()
-        pose.position.x = r * to_deg
-        pose.position.y = p * to_deg
-        pose.position.z = y * to_deg
+        pose.position.x = (r * to_deg + 180)%360
+        pose.position.y = (p * to_deg + 180)%360
+        pose.position.z = (y * to_deg + 180)%360
         anglesArray.poses.append(pose)
     anglesArray.header = poseArray.header
     return anglesArray
